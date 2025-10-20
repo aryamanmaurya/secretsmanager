@@ -1,0 +1,46 @@
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --body-bg: #ffffff;
+    --body-color: #212529;
+    --card-bg: #ffffff;
+    --border-color: #dee2e6;
+    --sidebar-bg: #f8f9fa;
+}
+
+[data-bs-theme="dark"] {
+    --body-bg: #121212;
+    --body-color: #e9ecef;
+    --card-bg: #1e1e1e;
+    --border-color: #444;
+    --sidebar-bg: #2d2d2d;
+    --light-color: #2d2d2d;
+}
+
+body {
+    background-color: var(--body-bg);
+    color: var(--body-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar {
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+}
+
+/* Add basic styling to fix 404 errors */
+.loading-spinner {
+    display: none;
+}
+
+.loading .loading-spinner {
+    display: inline-block;
+}

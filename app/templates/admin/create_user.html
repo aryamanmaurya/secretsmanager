@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Create User - Secrets Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="bi bi-person-plus"></i> Create New User
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.create_user') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" 
+                                   value="{{ form.username.data or '' }}" required 
+                                   minlength="3" maxlength="80"
+                                   placeholder="Enter username">
+                            <div class="form-text">
+                                3-80 characters, letters, numbers, and underscores only
+                            </div>
+                            {% if form.username.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.username.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ form.email.data or '' }}" required
+                                   placeholder="Enter email address">
+                            {% if form.email.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.email.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" 
+                                   required minlength="8"
+                                   placeholder="Enter password">
+                            <div class="form-text">
+                                Password must be at least 8 characters with uppercase, lowercase, number, and special character
+                            </div>
+                            {% if form.password.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.password.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="confirm_password" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirm_password" 
+                                   name="confirm_password" required
+                                   placeholder="Confirm password">
+                            {% if form.confirm_password.errors %}
+                            <div class="text-danger small">
+                                {% for error in form.confirm_password.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('admin.manage_users') }}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-person-plus"></i> Create User
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h6>User Creation Notes</h6>
+                    <ul class="small text-muted">
+                        <li>New users will be able to login immediately after creation</li>
+                        <li>You can modify user permissions (admin status, sharing, etc.) after creation</li>
+                        <li>Users start with sharing enabled by default</li>
+                        <li>You can reset user passwords at any time from the user management page</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Password confirmation validation
+    document.getElementById('confirm_password')?.addEventListener('input', function() {
+        const password = document.getElementById('password').value;
+        const confirmPassword = this.value;
+        
+        if (confirmPassword && password !== confirmPassword) {
+            this.setCustomValidity('Passwords do not match');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+
+    // Password strength indicator
+    document.getElementById('password')?.addEventListener('input', function() {
+        const password = this.value;
+        updatePasswordStrength(password);
+    });
+
+    function updatePasswordStrength(password) {
+        const strength = checkPasswordStrength(password);
+        const strengthText = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'][strength - 1] || 'Very Weak';
+        const strengthColor = ['danger', 'danger', 'warning', 'info', 'success'][strength - 1] || 'danger';
+        
+        // Update strength indicator if it exists
+        let indicator = document.getElementById('passwordStrength');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'passwordStrength';
+            indicator.className = 'form-text';
+            document.getElementById('password').parentNode.appendChild(indicator);
+        }
+        
+        indicator.innerHTML = `Password Strength: <span class="text-${strengthColor}">${strengthText}</span>`;
+    }
+
+    function checkPasswordStrength(password) {
+        let strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        
+        return strength;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="/dashboard" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back 
+                </a>
+                <h2>{{ project.name }}</h2>
+                <div>
+                    {% if project.owner_id == current_user.id %}
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                        data-bs-target="#shareProjectModal">
+                        <i class="bi bi-share"></i> Share Project
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if project.description %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Description</h5>
+                    <p class="card-text">{{ project.description }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Secrets Section -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Secrets</h5>
+                    {% if has_write_access %}
+                    <div>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#addTextSecretModal">
+                            <i class="bi bi-file-text"></i> Add Text Secret
+                        </button>
+                        <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#uploadFileModal">
+                            <i class="bi bi-upload"></i> Upload File
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if project.secrets %}
+                    <div class="list-group">
+                        {% for secret in project.secrets %}
+                        <div
+                            class="list-group-item secret-item {% if secret.secret_type == 'file' %}file{% else %}text{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i
+                                            class="bi {% if secret.secret_type == 'file' %}bi-file-earmark{% else %}bi-file-text{% endif %} me-2"></i>
+                                        {{ secret.name }}
+                                    </h6>
+                                    <small class="text-muted">
+                                        Type: {{ secret.secret_type }}
+                                        {% if secret.secret_type == 'file' %}
+                                        • Size: {{ (secret.file_size / 1024)|round(2) }} KB
+                                        {% endif %}
+                                        • Created: {{ secret.created_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                                <div class="btn-group">
+                                    {% if secret.secret_type == 'text' %}
+                                    <button class="btn btn-outline-primary btn-sm view-secret"
+                                        data-secret-id="{{ secret.id }}">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <button class="btn btn-outline-warning btn-sm edit-secret"
+                                        data-secret-id="{{ secret.id }}">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </button>
+                                    {% endif %}
+                                    <a href="{{ url_for('projects.download_secret', project_id=project.id, secret_id=secret.id) }}"
+                                        class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
+                                    {% if has_write_access %}
+                                    <button class="btn btn-outline-danger btn-sm delete-secret"
+                                        data-secret-id="{{ secret.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox display-1 text-muted"></i>
+                        <p class="text-muted mt-3">No secrets yet. Add your first secret to get started.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Text Secret Modal -->
+<div class="modal fade" id="addTextSecretModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Text Secret</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addTextSecretForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="secretName" class="form-label">Secret Name</label>
+                        <input type="text" class="form-control" id="secretName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="secretContent" class="form-label">Secret Content</label>
+                        <textarea class="form-control" id="secretContent" name="content" rows="6" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="addTextSecretBtn">
+                        <span class="loading-spinner spinner-border spinner-border-sm d-none me-1"></span>
+                        Add Secret
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Upload File Modal -->
+<div class="modal fade" id="uploadFileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload File Secret</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="uploadFileForm" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="fileInput" class="form-label">Choose File</label>
+                        <input type="file" class="form-control" id="fileInput" name="file" required
+                            accept=".txt,.pem,.key,.crt,.cer,.pfx,.p12">
+                        <div class="form-text">
+                            Maximum file size: 2MB. Allowed formats: txt, pem, key, crt, cer, pfx, p12
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadFileBtn">
+                        <span class="loading-spinner spinner-border spinner-border-sm d-none me-1"></span>
+                        Upload File
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Share Project Modal -->
+{% if project.owner_id == current_user.id %}
+<div class="modal fade" id="shareProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Share Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="shareProjectForm">
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label for="shareUser" class="form-label">User</label>
+                        <select class="form-select" id="shareUser" name="user" required>
+                            <option value="">Select a user...</option>
+                            {% for user in available_users %}
+                            <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sharePermission" class="form-label">Permission</label>
+                        <select class="form-select" id="sharePermission" name="permission" required>
+                            <option value="read">Read Only</option>
+                            <option value="read_write">Read & Write</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="shareProjectBtn">
+                        <span class="loading-spinner spinner-border spinner-border-sm d-none me-1"></span>
+                        Share Project
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- View Secret Modal -->
+<div class="modal fade" id="viewSecretModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewSecretTitle">Secret Content</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre class="bg-light p-3 border rounded" id="viewSecretContent"
+                    style="max-height: 400px; overflow-y: auto;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Secret Modal -->
+<div class="modal fade" id="editSecretModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Secret</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editSecretForm">
+                <div class="modal-body">
+                    <input type="hidden" id="editSecretId" name="secret_id">
+                    <div class="mb-3">
+                        <label for="editSecretName" class="form-label">Secret Name</label>
+                        <input type="text" class="form-control" id="editSecretName" name="name" required readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editSecretContent" class="form-label">Secret Content</label>
+                        <textarea class="form-control" id="editSecretContent" name="content" rows="10"
+                            required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveEditSecretBtn">
+                        <span class="loading-spinner spinner-border spinner-border-sm d-none me-1"></span>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Add Text Secret Form
+        const addTextSecretForm = document.getElementById('addTextSecretForm');
+        if (addTextSecretForm) {
+            addTextSecretForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = document.getElementById('addTextSecretBtn');
+                const spinner = btn.querySelector('.loading-spinner');
+
+                spinner.classList.remove('d-none');
+                btn.disabled = true;
+
+                try {
+                    const formData = new FormData(this);
+                    const response = await fetch(`/projects/{{ project.id }}/add_text_secret`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    // Handle non-JSON responses
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Server returned non-JSON response');
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addTextSecretModal'));
+                        modal.hide();
+
+                        this.reset();
+
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        showAlert(result.error || 'Failed to add secret', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error adding text secret:', error);
+                    showAlert('Error adding secret. Please try again.', 'danger');
+                } finally {
+                    spinner.classList.add('d-none');
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        // Upload File Form
+        const uploadFileForm = document.getElementById('uploadFileForm');
+        if (uploadFileForm) {
+            uploadFileForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = document.getElementById('uploadFileBtn');
+                const spinner = btn.querySelector('.loading-spinner');
+
+                spinner.classList.remove('d-none');
+                btn.disabled = true;
+
+                try {
+                    const formData = new FormData(this);
+                    const response = await fetch(`/projects/{{ project.id }}/upload_file`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    // Handle non-JSON responses
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        throw new Error('Server returned non-JSON response');
+                    }
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('uploadFileModal'));
+                        modal.hide();
+
+                        this.reset();
+
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        showAlert(result.error || 'Failed to upload file', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error uploading file:', error);
+                    showAlert('Error uploading file. Please try again.', 'danger');
+                } finally {
+                    spinner.classList.add('d-none');
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        // Share Project Form
+        const shareProjectForm = document.getElementById('shareProjectForm');
+        if (shareProjectForm) {
+            shareProjectForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = document.getElementById('shareProjectBtn');
+                const spinner = btn.querySelector('.loading-spinner');
+
+                spinner.classList.remove('d-none');
+                btn.disabled = true;
+
+                try {
+                    const formData = {
+                        user: document.getElementById('shareUser').value,
+                        permission: document.getElementById('sharePermission').value
+                    };
+
+                    const response = await fetch(`/projects/{{ project.id }}/share`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('shareProjectModal'));
+                        modal.hide();
+                        this.reset();
+                    } else {
+                        showAlert(result.error || 'Failed to share project', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error sharing project:', error);
+                    showAlert('Error sharing project. Please try again.', 'danger');
+                } finally {
+                    spinner.classList.add('d-none');
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        // View Secret buttons
+        document.querySelectorAll('.view-secret').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const secretId = this.dataset.secretId;
+
+                this.disabled = true;
+
+                try {
+                    const response = await fetch(`/projects/{{ project.id }}/secrets/${secretId}/view`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        document.getElementById('viewSecretTitle').textContent = result.name;
+                        document.getElementById('viewSecretContent').textContent = result.content;
+                        const modal = new bootstrap.Modal(document.getElementById('viewSecretModal'));
+                        modal.show();
+                    } else {
+                        showAlert(result.error || 'Failed to view secret', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error viewing secret:', error);
+                    showAlert('Error viewing secret. Please try again.', 'danger');
+                } finally {
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // Delete Secret buttons
+        document.querySelectorAll('.delete-secret').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const secretId = this.dataset.secretId;
+
+                if (confirm('Are you sure you want to delete this secret? This action cannot be undone.')) {
+                    deleteSecret(secretId);
+                }
+            });
+        });
+
+        async function deleteSecret(secretId) {
+            const btn = document.querySelector(`.delete-secret[data-secret-id="${secretId}"]`);
+
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`/projects/{{ project.id }}/secrets/${secretId}/delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showAlert(result.message, 'success');
+                    btn.closest('.list-group-item').remove();
+
+                    if (!document.querySelector('.secret-item')) {
+                        location.reload();
+                    }
+                } else {
+                    showAlert(result.error || 'Failed to delete secret', 'danger');
+                }
+            } catch (error) {
+                console.error('Error deleting secret:', error);
+                showAlert('Error deleting secret. Please try again.', 'danger');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function showAlert(message, type) {
+            document.querySelectorAll('.alert-dismissible').forEach(alert => {
+                alert.remove();
+            });
+
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+            alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+
+        }
+        // Add this to the existing JavaScript in project_detail.html
+
+        // Edit Secret buttons
+        document.querySelectorAll('.edit-secret').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const secretId = this.dataset.secretId;
+
+                this.disabled = true;
+
+                try {
+                    // First, get the current secret content
+                    const response = await fetch(`/projects/{{ project.id }}/secrets/${secretId}/view`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Populate the edit modal
+                        document.getElementById('editSecretId').value = secretId;
+                        document.getElementById('editSecretName').value = result.name;
+                        document.getElementById('editSecretContent').value = result.content;
+
+                        // Show the modal
+                        const modal = new bootstrap.Modal(document.getElementById('editSecretModal'));
+                        modal.show();
+                    } else {
+                        showAlert(result.error || 'Failed to load secret for editing', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error loading secret for editing:', error);
+                    showAlert('Error loading secret for editing. Please try again.', 'danger');
+                } finally {
+                    this.disabled = false;
+                }
+            });
+        });
+
+        // Handle edit form submission
+        const editSecretForm = document.getElementById('editSecretForm');
+        if (editSecretForm) {
+            editSecretForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const btn = document.getElementById('saveEditSecretBtn');
+                const spinner = btn.querySelector('.loading-spinner');
+
+                spinner.classList.remove('d-none');
+                btn.disabled = true;
+
+                const secretId = document.getElementById('editSecretId').value;
+                const content = document.getElementById('editSecretContent').value;
+
+                try {
+                    const response = await fetch(`/projects/{{ project.id }}/secrets/${secretId}/edit`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ content: content })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showAlert(result.message, 'success');
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editSecretModal'));
+                        modal.hide();
+
+                        // Reload the page to reflect changes
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        showAlert(result.error || 'Failed to update secret', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Error updating secret:', error);
+                    showAlert('Error updating secret. Please try again.', 'danger');
+                } finally {
+                    spinner.classList.add('d-none');
+                    btn.disabled = false;
+                }
+            });
+        }
+    });
+
+</script>
+{% endblock %}

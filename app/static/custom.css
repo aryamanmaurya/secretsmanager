@@ -1,0 +1,172 @@
+:root {
+    --primary-color: #0d6efd;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+    --body-bg: #ffffff;
+    --body-color: #212529;
+    --card-bg: #ffffff;
+    --border-color: #dee2e6;
+    --sidebar-bg: #f8f9fa;
+}
+
+[data-bs-theme="dark"] {
+    --body-bg: #121212;
+    --body-color: #e9ecef;
+    --card-bg: #1e1e1e;
+    --border-color: #444;
+    --sidebar-bg: #2d2d2d;
+    --light-color: #2d2d2d;
+}
+
+body {
+    background-color: var(--body-bg);
+    color: var(--body-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+    transition: all 0.3s ease;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar.collapsed .sidebar-content {
+    display: none;
+}
+
+.sidebar-toggle {
+    background: none;
+    border: none;
+    color: var(--body-color);
+    padding: 0.5rem;
+}
+
+/* Card Styles */
+.card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Table Styles */
+.table {
+    color: var(--body-color);
+}
+
+/* Form Styles */
+.form-control, .form-select {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border-color: var(--border-color);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--card-bg);
+    color: var(--body-color);
+    border-color: var(--primary-color);
+}
+
+/* Custom Button Styles */
+.btn-outline-secondary {
+    border-color: var(--border-color);
+    color: var(--body-color);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+/* Secret Item Styles */
+.secret-item {
+    border-left: 4px solid var(--primary-color);
+    transition: transform 0.2s ease;
+}
+
+.secret-item:hover {
+    transform: translateX(5px);
+}
+
+.secret-item.file {
+    border-left-color: var(--info-color);
+}
+
+.secret-item.text {
+    border-left-color: var(--success-color);
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: none;
+}
+
+.loading .loading-spinner {
+    display: inline-block;
+}
+
+/* Activity Log Styles */
+.activity-log {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.activity-item.success {
+    border-left-color: var(--success-color);
+}
+
+.activity-item.warning {
+    border-left-color: var(--warning-color);
+}
+
+.activity-item.danger {
+    border-left-color: var(--danger-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        z-index: 1000;
+        width: 280px;
+        transform: translateX(-100%);
+    }
+    
+    .sidebar.show {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+}
+
+/* Dark mode specific adjustments */
+[data-bs-theme="dark"] .navbar-dark {
+    background-color: #1a1a1a !important;
+}
+
+[data-bs-theme="dark"] .bg-light {
+    background-color: var(--card-bg) !important;
+}
+
+[data-bs-theme="dark"] .text-dark {
+    color: var(--body-color) !important;
+}

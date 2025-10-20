@@ -1,0 +1,415 @@
+<!-- ~/python/password_manager/app/templates/main/dashboard.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <!-- Dashboard Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="bi bi-speedometer2"></i> Dashboard</h2>
+        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> New Project
+        </a>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="dashboardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'my-projects' %}active{% endif %}" 
+                    id="my-projects-tab" data-bs-toggle="tab" data-bs-target="#my-projects" 
+                    type="button" role="tab" aria-controls="my-projects" 
+                    aria-selected="{% if active_tab == 'my-projects' %}true{% else %}false{% endif %}">
+                <i class="bi bi-folder"></i> My Projects
+                <span class="badge bg-primary ms-1">{{ owned_projects|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'shared-with-me' %}active{% endif %}" 
+                    id="shared-with-me-tab" data-bs-toggle="tab" data-bs-target="#shared-with-me" 
+                    type="button" role="tab" aria-controls="shared-with-me" 
+                    aria-selected="{% if active_tab == 'shared-with-me' %}true{% else %}false{% endif %}">
+                <i class="bi bi-share"></i> Shared With Me
+                <span class="badge bg-success ms-1">{{ shared_projects|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'shared-by-me' %}active{% endif %}" 
+                    id="shared-by-me-tab" data-bs-toggle="tab" data-bs-target="#shared-by-me" 
+                    type="button" role="tab" aria-controls="shared-by-me" 
+                    aria-selected="{% if active_tab == 'shared-by-me' %}true{% else %}false{% endif %}">
+                <i class="bi bi-person-check"></i> Shared By Me
+                <span class="badge bg-warning ms-1">{{ shared_by_me|length }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'activities' %}active{% endif %}" 
+                    id="activities-tab" data-bs-toggle="tab" data-bs-target="#activities" 
+                    type="button" role="tab" aria-controls="activities" 
+                    aria-selected="{% if active_tab == 'activities' %}true{% else %}false{% endif %}">
+                <i class="bi bi-clock-history"></i> Recent Activities
+                <span class="badge bg-info ms-1">{{ recent_activity|length }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="dashboardTabsContent">
+        <!-- My Projects Tab -->
+        <div class="tab-pane fade {% if active_tab == 'my-projects' %}show active{% endif %}" 
+             id="my-projects" role="tabpanel" aria-labelledby="my-projects-tab">
+            <div class="row">
+                {% if owned_projects %}
+                    {% for project in owned_projects %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-folder text-primary"></i> {{ project.name }}
+                                </h5>
+                                {% if project.description %}
+                                <p class="card-text text-muted small">{{ project.description[:100] }}{% if project.description|length > 100 %}...{% endif %}</p>
+                                {% endif %}
+                                <div class="mt-3">
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-shield-lock"></i> 
+                                        {% set secret_count = project.secrets|length %}
+                                        {{ secret_count }} secret{% if secret_count != 1 %}s{% endif %}
+                                    </span>
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-people"></i> 
+                                        {% set share_count = project.shares|length %}
+                                        {{ share_count }} share{% if share_count != 1 %}s{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('projects.view_project', project_id=project.id) }}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i> View Project
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-folder-x display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">No projects yet</h4>
+                        <p class="text-muted">Create your first project to get started</p>
+                        <a href="{{ url_for('projects.create_project') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create Project
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Shared With Me Tab -->
+        <div class="tab-pane fade {% if active_tab == 'shared-with-me' %}show active{% endif %}" 
+             id="shared-with-me" role="tabpanel" aria-labelledby="shared-with-me-tab">
+            <div class="row">
+                {% if shared_projects %}
+                    {% for share in shared_projects %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-share text-success"></i> {{ share.project.name }}
+                                </h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <strong>Owner:</strong> {{ share.project.owner.username }}<br>
+                                        <strong>Shared by:</strong> {{ share.shared_by.username }}<br>
+                                        <strong>Permission:</strong> 
+                                        <span class="badge {% if share.permission == 'read_write' %}bg-success{% else %}bg-info{% endif %}">
+                                            {{ share.permission|replace('_', ' ')|title }}
+                                        </span><br>
+                                        <strong>Shared on:</strong> {{ share.shared_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </p>
+                                <div class="mt-2">
+                                    <span class="badge bg-light text-dark">
+                                        <i class="bi bi-shield-lock"></i> 
+                                        {% set secret_count = share.project.secrets|length %}
+                                        {{ secret_count }} secret{% if secret_count != 1 %}s{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <a href="{{ url_for('projects.view_project', project_id=share.project.id) }}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i> View Project
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-share display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">No shared projects</h4>
+                        <p class="text-muted">Projects shared with you will appear here</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Shared By Me Tab -->
+        <div class="tab-pane fade {% if active_tab == 'shared-by-me' %}show active{% endif %}" 
+             id="shared-by-me" role="tabpanel" aria-labelledby="shared-by-me-tab">
+            <div class="row">
+                {% if shared_by_me %}
+                    {% for share in shared_by_me %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="bi bi-person-check text-warning"></i> {{ share.project.name }}
+                                </h5>
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        <strong>Shared with:</strong> {{ share.user.username }}<br>
+                                        <strong>Permission:</strong> 
+                                        <span class="badge {% if share.permission == 'read_write' %}bg-success{% else %}bg-info{% endif %}">
+                                            {{ share.permission|replace('_', ' ')|title }}
+                                        </span><br>
+                                        <strong>Shared on:</strong> {{ share.shared_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </p>
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <div class="btn-group w-100">
+                                    <a href="{{ url_for('projects.view_project', project_id=share.project.id) }}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <button class="btn btn-outline-danger btn-sm unshare-project" 
+                                            data-share-id="{{ share.share_id }}"
+                                            data-project-name="{{ share.project.name }}"
+                                            data-user-name="{{ share.user.username }}">
+                                        <i class="bi bi-trash"></i> Unshare
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-person-check display-1 text-muted"></i>
+                        <h4 class="text-muted mt-3">No projects shared by you</h4>
+                        <p class="text-muted">When you share projects with others, they will appear here</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Activities Tab -->
+        <div class="tab-pane fade {% if active_tab == 'activities' %}show active{% endif %}" 
+             id="activities" role="tabpanel" aria-labelledby="activities-tab">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-clock-history"></i> Recent Activities</h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_activity %}
+                        <div class="list-group list-group-flush">
+                            {% for activity in recent_activity %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        <i class="bi 
+                                            {% if activity.action == 'login' %}bi-box-arrow-in-right
+                                            {% elif activity.action == 'logout' %}bi-box-arrow-right
+                                            {% elif activity.action == 'create_project' %}bi-plus-circle
+                                            {% elif 'share' in activity.action %}bi-share
+                                            {% elif 'secret' in activity.action %}bi-shield-lock
+                                            {% elif 'view' in activity.action %}bi-eye
+                                            {% elif 'delete' in activity.action %}bi-trash
+                                            {% elif 'upload' in activity.action %}bi-upload
+                                            {% elif 'download' in activity.action %}bi-download
+                                            {% else %}bi-activity{% endif %} 
+                                            text-primary me-2"></i>
+                                        {{ activity.action|replace('_', ' ')|title }}
+                                    </h6>
+                                    <small class="text-muted">{{ activity.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                                {% if activity.details %}
+                                <p class="mb-1 text-muted small">{{ activity.details }}</p>
+                                {% endif %}
+                                <small class="text-muted">
+                                    <i class="bi bi-globe"></i> IP: {{ activity.ip_address }}
+                                </small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-clock-history display-1 text-muted"></i>
+                            <h4 class="text-muted mt-3">No recent activity</h4>
+                            <p class="text-muted">Your activities will appear here</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap tabs
+    const triggerTabList = [].slice.call(document.querySelectorAll('#dashboardTabs button'));
+    triggerTabList.forEach(function (triggerEl) {
+        const tabTrigger = new bootstrap.Tab(triggerEl);
+        
+        triggerEl.addEventListener('click', function (event) {
+            event.preventDefault();
+            tabTrigger.show();
+            
+            // Update URL without page reload
+            const tabId = this.id.replace('-tab', '');
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabId);
+            window.history.pushState({}, '', url);
+            
+            // Update page title to reflect active tab
+            const tabName = this.textContent.trim().split('\n')[0];
+            document.title = tabName + ' - Secrets Manager';
+        });
+    });
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab') || 'my-projects';
+        
+        // Show the correct tab
+        const tabElement = document.getElementById(tabParam + '-tab');
+        if (tabElement) {
+            const tab = new bootstrap.Tab(tabElement);
+            tab.show();
+        }
+    });
+
+    // Handle unshare project buttons - with event delegation for dynamic content
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('unshare-project') || 
+            e.target.closest('.unshare-project')) {
+            
+            const button = e.target.classList.contains('unshare-project') ? 
+                          e.target : e.target.closest('.unshare-project');
+            
+            const shareId = button.dataset.shareId;
+            const projectName = button.dataset.projectName;
+            const userName = button.dataset.userName;
+            
+            if (confirm(`Are you sure you want to unshare project "${projectName}" with ${userName}?`)) {
+                unshareProject(shareId, button);
+            }
+        }
+    });
+
+    async function unshareProject(shareId, button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Unsharing...';
+        button.disabled = true;
+
+        try {
+            const response = await fetch(`/unshare_project/${shareId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showAlert(result.message, 'success');
+                // Remove the card from the DOM
+                const cardElement = button.closest('.col-md-6, .col-lg-4');
+                if (cardElement) {
+                    cardElement.remove();
+                    
+                    // Update the badge count
+                    const sharedByMeTab = document.getElementById('shared-by-me-tab');
+                    const badge = sharedByMeTab.querySelector('.badge');
+                    if (badge) {
+                        const currentCount = parseInt(badge.textContent) || 0;
+                        badge.textContent = Math.max(0, currentCount - 1);
+                    }
+                    
+                    // If no shares left, show empty state
+                    if (!document.querySelector('.unshare-project')) {
+                        const sharedByMeTab = document.getElementById('shared-by-me');
+                        const existingEmptyState = sharedByMeTab.querySelector('.text-center');
+                        if (!existingEmptyState) {
+                            const emptyState = `
+                                <div class="col-12 text-center py-5">
+                                    <i class="bi bi-person-check display-1 text-muted"></i>
+                                    <h4 class="text-muted mt-3">No projects shared by you</h4>
+                                    <p class="text-muted">When you share projects with others, they will appear here</p>
+                                </div>
+                            `;
+                            sharedByMeTab.querySelector('.row').innerHTML = emptyState;
+                        }
+                    }
+                }
+            } else {
+                showAlert(result.error || 'Failed to unshare project', 'danger');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error unsharing project:', error);
+            showAlert('Error unsharing project. Please try again.', 'danger');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }
+
+    function showAlert(message, type) {
+        // Remove existing alerts
+        document.querySelectorAll('.alert-dismissible').forEach(alert => {
+            alert.remove();
+        });
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertBefore(alertDiv, container.firstChild);
+        }
+
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    // Refresh activity logs every 30 seconds if on activities tab
+    function startActivityRefresh() {
+        setInterval(() => {
+            const activeTab = document.querySelector('#dashboardTabs .nav-link.active');
+            if (activeTab && activeTab.id === 'activities-tab') {
+                // You could add AJAX refresh here if needed
+                console.log('Activities tab is active - could refresh data here');
+            }
+        }, 30000);
+    }
+    
+    startActivityRefresh();
+});
+</script>
+{% endblock %}
